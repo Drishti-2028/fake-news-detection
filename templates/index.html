@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>The Veritas Gazette — Fake News Detector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=IM+Fell+English:ital@0;1&family=Special+Elite&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Special Elite', monospace;
+      background: #f5f0e8;
+      color: #1a1a1a;
+      min-height: 100vh;
+      padding: 30px 16px 60px;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #faf7f2;
+      border: 1px solid #c8bfa8;
+      padding: 0 32px 32px;
+      box-shadow: 4px 4px 0 #c8bfa8;
+    }
+
+    /* Masthead */
+    .masthead {
+      border-top: 5px solid #1a1a1a;
+      border-bottom: 5px solid #1a1a1a;
+      padding: 10px 0 8px;
+      text-align: center;
+      margin-bottom: 0;
+    }
+    .dateline {
+      font-size: 11px;
+      color: #666;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .paper-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 52px;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -1px;
+    }
+    .paper-subtitle {
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: #666;
+      letter-spacing: 1px;
+      margin-top: 5px;
+    }
+    .rule { border: none; border-top: 1px solid #1a1a1a; margin: 6px 0; }
+    .rule-thick { border: none; border-top: 3px double #1a1a1a; margin: 0; }
+
+    .edition-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 4px 0;
+      border-bottom: 1px solid #1a1a1a;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: #888;
+    }
+    .edition-bar span.dot { margin: 0 12px; }
+
+    /* Body layout */
+    .body { display: flex; gap: 0; padding: 20px 0; align-items: flex-start; }
+    .col-main { flex: 2; min-width: 0; padding-right: 20px; border-right: 1px solid #1a1a1a; }
+    .col-side  { flex: 1; min-width: 0; padding-left: 20px; }
+
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #888;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .headline {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+    .deck {
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 18px;
+      line-height: 1.6;
+    }
+
+    textarea {
+      width: 100%;
+      font-family: 'IM Fell English', serif;
+      font-size: 15px;
+      line-height: 1.7;
+      padding: 12px 14px;
+      border: 1px solid #1a1a1a;
+      background: #fff9f0;
+      color: #1a1a1a;
+      resize: vertical;
+      min-height: 120px;
+      border-radius: 0;
+      outline: none;
+    }
+    textarea:focus {
+      background: #fff;
+      box-shadow: inset 0 0 0 2px #1a1a1a;
+    }
+    textarea::placeholder { font-style: italic; color: #aaa; }
+
+    button[type="submit"] {
+      font-family: 'Special Elite', monospace;
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 10px 28px;
+      border: 2px solid #1a1a1a;
+      background: #1a1a1a;
+      color: #faf7f2;
+      cursor: pointer;
+      border-radius: 0;
+      margin-top: 12px;
+      transition: all 0.15s;
+    }
+    button[type="submit"]:hover { background: transparent; color: #1a1a1a; }
+    button[type="submit"]:active { transform: scale(0.97); }
+
+    /* Result box */
+    .result-box {
+      margin-top: 20px;
+      border: 2px solid #1a1a1a;
+      padding: 16px 18px;
+    }
+    .verdict {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 900;
+      line-height: 1;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .verdict.fake { color: #8b0000; }
+    .verdict.real { color: #0a4d36; }
+
+    .stamp {
+      display: inline-block;
+      border: 3px solid currentColor;
+      padding: 2px 10px;
+      font-family: 'Special Elite', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      transform: rotate(-2deg);
+    }
+
+    .verdict-sub {
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: #555;
+      margin-top: 8px;
+    }
+    .verdict-note {
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: #888;
+      margin-top: 10px;
+    }
+
+    /* Sidebar */
+    .tips {
+      font-family: 'IM Fell English', serif;
+      font-size: 13px;
+      line-height: 1.9;
+      color: #555;
+      padding-left: 16px;
+    }
+    .tips li { margin-bottom: 2px; }
+
+    .pull-quote {
+      font-family: 'Playfair Display', serif;
+      font-size: 17px;
+      font-weight: 700;
+      font-style: italic;
+      line-height: 1.4;
+      color: #555;
+      border-left: 3px solid #1a1a1a;
+      padding-left: 12px;
+      margin-top: 4px;
+    }
+    .pull-attr {
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: #aaa;
+      margin-top: 6px;
+    }
+
+    /* Footer */
+    .footer {
+      border-top: 3px double #1a1a1a;
+      padding-top: 8px;
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: #aaa;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Masthead -->
+  <div class="masthead">
+    <div class="dateline" id="dateline"></div>
+    <div class="paper-title">The Veritas Gazette</div>
+    <div class="paper-subtitle">"Truth, Unvarnished — Fabrication, Exposed"</div>
+  </div>
+  <hr class="rule-thick">
+  <div class="edition-bar">
+    <span>Artificial Intelligence Edition</span>
+    <span class="dot">◆</span>
+    <span>Powered by Decision Tree · 99.79% Accuracy</span>
+    <span class="dot">◆</span>
+    <span>44,898 Articles in Training Corpus</span>
+  </div>
+
+  <!-- Body -->
+  <div class="body">
+    <div class="col-main">
+      <div class="headline">Submit Your Dispatch for Verification</div>
+      <div class="deck">Paste any news article, headline, or report below. Our editorial intelligence will examine the evidence and render its verdict forthwith.</div>
+
+      <form action="/predict" method="POST">
+        <span class="section-label">Your news article</span>
+        <textarea name="news" placeholder="Enter the full text of the news article here for examination…" required>{{ news_text or '' }}</textarea>
+        <button type="submit">Submit for Verdict</button>
+      </form>
+
+      {% if result %}
+      <div class="result-box">
+        <span class="section-label">Editorial Verdict</span>
+        <div class="verdict {{ result }}">
+          {{ result | upper }} NEWS
+          <span class="stamp">{{ 'Fabricated' if result == 'fake' else 'Verified' }}</span>
+        </div>
+        <div class="verdict-sub">
+          {% if result == 'fake' %}
+            Our editorial intelligence has flagged this article as likely disinformation or fabricated content.
+          {% else %}
+            This article bears the hallmarks of credible, factual journalism.
+          {% endif %}
+        </div>
+        <hr class="rule" style="margin: 12px 0 10px;">
+        <div class="verdict-note">
+          {% if result == 'fake' %}
+            ⚠  Exercise caution. Cross-reference with verified sources before sharing.
+          {% else %}
+            ✓  Consistent with verified reporting standards. Proceed with appropriate judgment.
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="col-side">
+      <span class="section-label">From the Editor's Desk</span>
+      <ul class="tips">
+        <li>Paste full article text for best results</li>
+        <li>Headlines alone may yield uncertain verdicts</li>
+        <li>Model trained on 44,898 verified articles</li>
+        <li>Decision Tree · 99.79% accuracy</li>
+        <li>Confidence improves with longer text</li>
+      </ul>
+      <hr class="rule" style="margin: 14px 0;">
+      <span class="section-label">About this instrument</span>
+      <div style="font-family:'IM Fell English',serif; font-size:13px; line-height:1.8; color:#555;">
+        Built with scikit-learn, Flask &amp; the Kaggle Fake News corpus. An exercise in machine learning and editorial integrity.
+      </div>
+      <hr class="rule" style="margin: 14px 0;">
+      <div class="pull-quote">"A lie travels around the world while truth is still putting on its shoes."</div>
+      <div class="pull-attr">— Mark Twain</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    The Veritas Gazette · All verdicts rendered by machine intelligence · No subscription required
+  </div>
+</div>
+
+<script>
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const d = new Date();
+  document.getElementById('dateline').textContent =
+    days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear() + '  ·  Vol. I, No. 1';
+</script>
+</body>
+</html>
